@@ -1,5 +1,5 @@
 """Genre Service module"""
-from flixify.dao.base import BaseDAO
+from flixify.dao import GenreDAO
 from flixify.helpers.log_handler import services_logger
 
 
@@ -10,7 +10,7 @@ class GenreService:
     :param genres_dao: A GenreDAO object to use for database interaction.
     """
 
-    def __init__(self, genres_dao: BaseDAO) -> None:
+    def __init__(self, genres_dao: GenreDAO) -> None:
         """
         Constructor method.
 

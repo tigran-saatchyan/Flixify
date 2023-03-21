@@ -1,13 +1,15 @@
 import calendar
-import datetime
-from typing import Any
+from datetime import datetime, timedelta
+from typing import Any, Type
 
 import jwt
-from flask import abort
+from flask import abort, current_app
+from jwt import InvalidSignatureError
 
 from flixify.helpers.constants import JWT_ALGORITHM, JWT_SECRET
 from flixify.helpers.log_handler import services_logger
 from flixify.services.user import UserService
+from flixify.setup.db.models import User
 
 
 class AuthService:
@@ -28,57 +30,59 @@ class AuthService:
 
     def generate_token(
         self,
-        username: str,
+        email: str,
         password: Any,
         is_refresh: bool = False
     ) -> dict:
         """
         Generates access and refresh token for the provided user credentials.
 
-        :param username: string value, username of the user.
+        :param email: string value, email of the user.
         :param password: string value, password of the user.
         :param is_refresh: bool value, whether this token is a refresh
             token or not. Default is False.
 
         :return: dictionary containing access_token and refresh_token.
         """
-        user = self.user_service.get_by_username(username)
-
+        user: Type[User] = self.user_service.get_by_email(email)
         if user is None:
             self.logger.info("User not found")
-            abort(404)
+            abort(404, "User not found")
 
         if not is_refresh:
             if not self.user_service.compare_passwords(
                     user.password, password
             ):
                 self.logger.info("Invalid password")
-                abort(400)
+                abort(400, "Invalid password")
 
-        data = {
-            "username": user.username,
-            "role": user.role
+        data: dict[str, int | Any] = {
+            "email": user.email,
         }
 
         # access_token
-        min30 = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
-        data["expires"] = calendar.timegm(min30.timetuple())
-        access_token = jwt.encode(
+        access_token_life: datetime = datetime.utcnow() + timedelta(
+            minutes=current_app.config['ACCESS_TOKEN_MINUTES']
+        )
+        data["expires"] = calendar.timegm(access_token_life.timetuple())
+        access_token: str = jwt.encode(
             data,
             JWT_SECRET,
             algorithm=JWT_ALGORITHM
         )
 
         # refresh_token
-        days130 = datetime.datetime.utcnow() + datetime.timedelta(days=130)
-        data["expires"] = calendar.timegm(days130.timetuple())
-        refresh_token = jwt.encode(
+        refresh_token_life: datetime = datetime.utcnow() + timedelta(
+            days=current_app.config['REFRESH_TOKEN_DAYS']
+        )
+        data["expires"] = calendar.timegm(refresh_token_life.timetuple())
+        refresh_token: str = jwt.encode(
             data,
             JWT_SECRET,
             algorithm=JWT_ALGORITHM
         )
 
-        self.logger.info("Generated tokens for user {}".format(username))
+        self.logger.info("Generated tokens for user {}".format(email))
 
         return {
             "access_token": access_token,
@@ -93,14 +97,19 @@ class AuthService:
 
         :return: dictionary containing approved access_token and refresh_token.
         """
-        data = jwt.decode(
-            jwt=refresh_token,
-            key=JWT_SECRET,
-            algorithms=[JWT_ALGORITHM]
-        )
-        username = data.get("username")
-        tokens = self.generate_token(username, None, is_refresh=True)
 
-        self.logger.info("Approved refresh token for user {}".format(username))
+        try:
+            data: dict[str, Any] = jwt.decode(
+                jwt=refresh_token,
+                key=JWT_SECRET,
+                algorithms=[JWT_ALGORITHM]
+            )
+            email: str = data.get("email")
+            tokens: dict = self.generate_token(email, None, is_refresh=True)
+            self.logger.info(
+                "Approved refresh token for user {}".format(email)
+            )
+            return tokens
 
-        return tokens
+        except InvalidSignatureError:
+            abort(500, "Signature verification failed")

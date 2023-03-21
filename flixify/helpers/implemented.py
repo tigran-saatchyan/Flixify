@@ -1,5 +1,6 @@
 from flixify.dao import DirectorDAO, GenreDAO, MovieDAO, UserDAO
-from flixify.services import DirectorService, MovieService, GenreService, \
+from flixify.services import AuthService, DirectorService, MovieService, \
+    GenreService, \
     UserService
 from flixify.setup.db import db
 
@@ -17,3 +18,5 @@ genre_service = GenreService(genre_dao)
 
 user_dao = UserDAO(db.session)
 user_service = UserService(user_dao)
+
+auth_service = AuthService(user_service)

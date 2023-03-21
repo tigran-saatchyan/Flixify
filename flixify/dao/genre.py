@@ -1,6 +1,6 @@
 """GenreDAO module"""
 from flixify.dao.base import BaseDAO
-from flixify.setup import Genre
+from flixify.setup.db.models import Genre
 
 
 class GenreDAO(BaseDAO[Genre]):

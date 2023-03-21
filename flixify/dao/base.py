@@ -5,7 +5,7 @@ from flask_sqlalchemy import BaseQuery
 from sqlalchemy.orm import scoped_session
 from werkzeug.exceptions import NotFound
 
-from flixify.setup.db.base import Base
+from flixify.setup.db.models import Base
 
 T = TypeVar('T', bound=Base)
 
@@ -18,7 +18,7 @@ class BaseDAO(Generic[T]):
 
     @property
     def _items_per_page(self) -> int:
-        return current_app.config['ITEMS_PER_PAGE']
+        return current_app.config['MOVIES_PER_PAGE']
 
     def create(self, data: dict) -> None:
         entity = self.__model__(**data)
@@ -38,26 +38,30 @@ class BaseDAO(Generic[T]):
         status: Optional[str] = None
     ) -> list[Type[Base]]:
 
-        query: BaseQuery[Base] = self.db_session.query(self.__model__)
+        req: BaseQuery[Base] = self.db_session.query(self.__model__)
 
         if year:
-            query = query.filter(self.__model__.year == year)
+            req = req.filter(self.__model__.year == year)
 
         if did:
-            query = query.filter(self.__model__.director_id == did)
+            req = req.filter(self.__model__.director_id == did)
 
         if gid:
-            query = query.filter(self.__model__.genre_id == gid)
+            req = req.filter(self.__model__.genre_id == gid)
 
         if status == 'new':
-            query = query.order_by(self.__model__.year.desc())
+            req = req.order_by(self.__model__.year.desc())
 
         if page:
             try:
-                return query.paginate(page, self._items_per_page).items
+                return req.paginate(
+                    page=page,
+                    per_page=self._items_per_page,
+                    error_out=False
+                ).items
             except NotFound:
                 return []
-        return query.all()
+        return req.all()
 
     def update(self, pk: int, data: dict) -> int:
 

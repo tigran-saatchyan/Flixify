@@ -1,7 +1,7 @@
 from flixify.setup.db import db
-from flixify.setup.db.base import Base
-from flixify.setup.db.director import Director
-from flixify.setup.db.genre import Genre
+from flixify.setup.db.models.base import Base
+from flixify.setup.db.models.director import Director
+from flixify.setup.db.models.genre import Genre
 
 
 class Movie(Base):

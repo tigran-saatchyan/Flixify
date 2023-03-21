@@ -1,39 +1,17 @@
 """Movie view module"""
 
 from flask import request
-from flask_restx import Api, Namespace, Resource, reqparse
+from flask_restx import Namespace, Resource
 from werkzeug.exceptions import HTTPException
 
-from dao.model.movie import MovieSchema
-from helpers.decorators import admin_required, auth_required
-from helpers.implemented import movies_service
-from log_handler import views_logger
+from flixify.helpers.decorators import auth_required
+from flixify.helpers.implemented import movie_service
+from flixify.helpers.log_handler import views_logger
+from flixify.setup.api.models.movie import movie_model
+from flixify.setup.api.parsers.movie import movie_get_all_parser
+
 
 movies_ns = Namespace('movies')
-
-movies_schema = MovieSchema(many=True)
-movie_schema = MovieSchema()
-
-api = Api()
-
-movies_parser = reqparse.RequestParser()
-movies_parser.add_argument(
-    'year',
-    type=int,
-    help='(optional) Filter by year'
-)
-
-movies_parser.add_argument(
-    'director_id',
-    type=int,
-    help='(optional) Filter by director ID:'
-)
-
-movies_parser.add_argument(
-    'genre_id',
-    type=int,
-    help='(optional) Filter by genre ID:'
-)
 
 
 @movies_ns.route('/')
@@ -50,7 +28,9 @@ class MoviesView(Resource):
     post():
         creates a new movie
     """
-    @api.doc(parser=movies_parser)
+
+    @movies_ns.doc(parser=movie_get_all_parser)
+    @movies_ns.marshal_with(movie_model, code=200, description='OK')
     @auth_required
     @movies_ns.response(200, 'Success')
     @movies_ns.response(400, 'Bad Request')
@@ -64,31 +44,41 @@ class MoviesView(Resource):
             'Request received: %s - %s',
             request.method, request.url
         )
-        params = ['year', 'director_id', 'genre_id']
+
+        params = ['page', 'year', 'director_id', 'genre_id']
         errors = {
-            param: f"{param.title()} must be a digital value" for param
-            in params if
-            request.args.get(param) and not request.args.get(
+            param: f"{param.title()} must be a digital value"
+            for param in params
+            if request.args.get(param) and not request.args.get(
                 param
             ).isdigit()
         }
+
+        status = request.args.get('status')
 
         if errors:
             views_logger.warning('Invalid request parameters: %s', errors)
             return errors, 400
 
-        year, director_id, genre_id = (
+        page, year, director_id, genre_id = (
             request.args.get(param, 0, type=int)
             for param in params
         )
 
-        movies = movies_service.get_all(year, director_id, genre_id)
-        response = movies_schema.dump(movies)
+        movies = movie_service.get_all(
+            page,
+            year,
+            director_id,
+            genre_id,
+            status
+        )
+
+        response = movies
         views_logger.info('Response sent: %s', response)
         return response, 200
 
     @staticmethod
-    @admin_required
+    # @admin_required
     def post():
         """
         Create a new movie.
@@ -100,7 +90,7 @@ class MoviesView(Resource):
             request.method, request.url
         )
         movie = request.json
-        movies_service.create(movie)
+        movie_service.create(movie)
         views_logger.info('Response sent: Success')
         return "", 201
 
@@ -121,8 +111,9 @@ class MovieView(Resource):
     delete(mid):
         Delete a specific movie.
     """
+
     @staticmethod
-    @auth_required
+    # @auth_required
     @movies_ns.response(200, 'Success')
     @movies_ns.response(404, 'Not Found')
     def get(mid):
@@ -138,7 +129,7 @@ class MovieView(Resource):
             request.method, request.url
         )
         try:
-            movie = movies_service.get_one(mid)
+            movie = movie_service.get_one(mid)
         except HTTPException as err:
             views_logger.error(
                 "Error retrieving movie with id %d. Error: %s",
@@ -146,12 +137,11 @@ class MovieView(Resource):
             )
             return {'message': err.description}, err.code
 
-        response = movie_schema.dump(movie)
-        views_logger.info('Response sent: %s', response)
-        return response, 200
+        views_logger.info('Response sent: %s', movie)
+        return movie, 200
 
     @staticmethod
-    @admin_required
+    # @admin_required
     @movies_ns.response(200, 'Success')
     @movies_ns.response(204, 'No Content')
     def put(mid):
@@ -167,7 +157,7 @@ class MovieView(Resource):
             request.method, request.url
         )
         movie = request.json
-        result = movies_service.update(mid, movie)
+        result = movie_service.update(mid, movie)
         if result:
             views_logger.info('Response sent: Success')
             return "Success", 200
@@ -177,7 +167,7 @@ class MovieView(Resource):
         return {"error": "must contain all required fields"}, 204
 
     @staticmethod
-    @admin_required
+    # @admin_required
     @movies_ns.response(204, 'No Content')
     @movies_ns.response(404, 'Not Found')
     def delete(mid):
@@ -192,6 +182,6 @@ class MovieView(Resource):
             'Request received: %s %s',
             request.method, request.url
         )
-        movies_service.delete(mid)
+        movie_service.delete(mid)
         views_logger.info('Response sent: No Content')
         return "", 204

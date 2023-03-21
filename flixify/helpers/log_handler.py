@@ -5,12 +5,12 @@ import os
 
 from flixify.helpers.constants import LOG_DIR
 
-logging.basicConfig(
-    filename=os.path.join(LOG_DIR, 'main.log'),
-    filemode='a',
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    level=logging.DEBUG
-)
+# logging.basicConfig(
+#     filename=os.path.join(LOG_DIR, 'main.log'),
+#     filemode='a',
+#     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+#     level=logging.DEBUG
+# )
 
 formatter = logging.Formatter(
     "%(asctime)s [%(levelname)s] %(name)s: %(message)s"

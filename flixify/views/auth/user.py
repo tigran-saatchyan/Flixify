@@ -2,12 +2,11 @@
 from flask import request
 from flask_restx import Namespace, Resource
 
+from flixify.helpers.implemented import user_service
 from flixify.helpers.log_handler import views_logger
+from flixify.setup.api.models.user import user_model
 
 users_ns = Namespace('users')
-
-users_schema = UserSchema(many=True)
-user_schema = UserSchema()
 
 
 @users_ns.route('/')
@@ -25,6 +24,7 @@ class UsersView(Resource):
     """
     @staticmethod
     # @admin_required
+    @users_ns.marshal_with(user_model, code=200, description='OK')
     def get():
         """
         Retrieve all users.
@@ -34,7 +34,7 @@ class UsersView(Resource):
         views_logger.info('Retrieving all users')
         users = user_service.get_all()
         views_logger.debug('Retrieved %s users', len(users))
-        return users_schema.dump(users), 200
+        return users, 200
 
     @staticmethod
     # @admin_required
@@ -84,7 +84,7 @@ class UserView(Resource):
 
         if user:
             views_logger.debug('Retrieved user: %s', user)
-            return user_schema.dump(user), 200
+            return user, 200
 
         views_logger.warning('User with id %s not found', uid)
         return {'message': 'User not found'}, 404

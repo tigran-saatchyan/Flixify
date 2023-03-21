@@ -1,5 +1,5 @@
 """Director service module"""
-from flixify.dao.base import BaseDAO
+from flixify.dao import DirectorDAO
 from flixify.helpers.log_handler import services_logger
 
 
@@ -10,7 +10,7 @@ class DirectorService:
     :param directors_dao: A DirectorDAO object to use for database interaction.
     """
 
-    def __init__(self, directors_dao: BaseDAO) -> None:
+    def __init__(self, directors_dao: DirectorDAO) -> None:
         """
         Constructor method.
 

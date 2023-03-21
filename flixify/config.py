@@ -6,8 +6,13 @@ from flixify.helpers.constants import SQLITE_DEV_DB_NAME, \
 
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', 'my_precious_secret_key')
     DEBUG = False
+
+    MOVIES_PER_PAGE = 12
+    RESTX_MASK_SWAGGER = False
+
+    ACCESS_TOKEN_MINUTES = 60
+    REFRESH_TOKEN_DAYS = 90
 
 
 class DevelopmentConfig(Config):

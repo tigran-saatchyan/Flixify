@@ -1,4 +1,4 @@
-from flixify.setup.db.base import Base
+from flixify.setup.db.models.base import Base
 from flixify.setup.db import db
 
 

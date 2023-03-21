@@ -1,6 +1,6 @@
 """DirectorDAO module"""
 from flixify.dao.base import BaseDAO
-from flixify.setup import Director
+from flixify.setup.db.models import Director
 
 
 class DirectorDAO(BaseDAO[Director]):

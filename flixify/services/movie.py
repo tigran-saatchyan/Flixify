@@ -1,9 +1,9 @@
 """Movie Service module"""
 from flask import abort
 
-from flixify.dao.base import BaseDAO
+from flixify.dao import MovieDAO
 from flixify.helpers.log_handler import services_logger
-from flixify.setup import Movie
+from flixify.setup.db.models import Movie
 
 
 class MovieService:
@@ -13,7 +13,7 @@ class MovieService:
     :param movies_dao: A MovieDAO object to use for database interaction.
     """
 
-    def __init__(self, movies_dao: BaseDAO[Movie]) -> None:
+    def __init__(self, movies_dao: MovieDAO) -> None:
         """
         Constructor method.
 
@@ -22,9 +22,12 @@ class MovieService:
         self.movies_dao = movies_dao
         self.logger = services_logger
 
-    def get_all(self, year=None, did=None, gid=None):
+    def get_all(self, page=None, year=None, did=None, gid=None, status=None):
         """
         Retrieve a list of movies filtered by year, director, and/or genre.
+
+        :param page:
+        :param status:
 
         :param year: The year to filter movies by.
         :param did: The ID of the director to filter movies by.
@@ -33,7 +36,13 @@ class MovieService:
         :return: A list of Movie instances.
         """
         self.logger.info("Retrieving all movies")
-        movies = self.movies_dao.get_all(year=year, did=did, gid=gid)
+        movies = self.movies_dao.get_all(
+            page=page,
+            year=year,
+            did=did,
+            gid=gid,
+            status=status
+        )
         self.logger.info(f"Retrieved {len(movies)} movies")
         return movies
 

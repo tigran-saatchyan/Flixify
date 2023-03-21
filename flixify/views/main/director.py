@@ -2,16 +2,11 @@
 from flask import request
 from flask_restx import Namespace, Resource
 
-from dao.model.director import DirectorSchema
-from helpers.decorators import admin_required, auth_required, \
-    put_logging_and_response
-from helpers.implemented import directors_service
-from log_handler import views_logger
+from flixify.helpers.implemented import director_service
+from flixify.helpers.log_handler import views_logger
+from flixify.setup.api.models.director import director_model
 
 directors_ns = Namespace('directors')
-
-directors_schema = DirectorSchema(many=True)
-director_schema = DirectorSchema()
 
 
 @directors_ns.route('/')
@@ -27,8 +22,10 @@ class DirectorsView(Resource):
     post():
         Create a new director.
     """
+
     @staticmethod
     # @auth_required
+    @directors_ns.marshal_with(director_model, code=200, description='OK')
     def get():
         """
         Retrieve all directors.
@@ -36,12 +33,12 @@ class DirectorsView(Resource):
         :return: A list of dictionaries representing all directors.
         """
         views_logger.info('Getting all directors...')
-        directors = directors_service.get_all()
+        directors = director_service.get_all()
         views_logger.info('Returned %s directors', len(directors))
         return directors_schema.dump(directors), 200
 
     @staticmethod
-    @admin_required
+    # @admin_required
     def post():
         """
         Create a new director.
@@ -53,7 +50,7 @@ class DirectorsView(Resource):
             request.method, request.url
         )
         director = request.json
-        directors_service.create(director)
+        director_service.create(director)
         views_logger.info('Response sent: Success')
         return "", 201
 
@@ -74,8 +71,9 @@ class DirectorView(Resource):
     delete(did):
         Delete a specific director.
     """
+
     @staticmethod
-    @auth_required
+    # @auth_required
     @directors_ns.response(200, 'Success')
     @directors_ns.response(404, 'Not Found')
     def get(did):
@@ -87,15 +85,14 @@ class DirectorView(Resource):
         :return: The director object.
         """
         views_logger.info('Getting director with id %d...', did)
-        director = directors_service.get_one(did)
+        director = director_service.get_one(did)
         views_logger.info(f'Returned director: {director.name}')
         return director_schema.dump(director), 200
 
     @staticmethod
-    @admin_required
+    # @admin_required
     @directors_ns.response(200, 'Success')
     @directors_ns.response(204, 'No Content')
-    @put_logging_and_response
     def put(did):
         """
         Update an existing director.
@@ -105,10 +102,10 @@ class DirectorView(Resource):
         :return: The updated director object.
         """
         director = request.json
-        return directors_service.update(did, director)
+        return director_service.update(did, director)
 
     @staticmethod
-    @admin_required
+    # @admin_required
     @directors_ns.response(200, 'Success')
     @directors_ns.response(204, 'No Content')
     @directors_ns.response(404, 'Not Found')
@@ -124,6 +121,6 @@ class DirectorView(Resource):
             'Request received: %s %s',
             request.method, request.url
         )
-        directors_service.delete(did)
+        director_service.delete(did)
         views_logger.info('Response sent: No Content')
         return "", 204
