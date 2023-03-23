@@ -1,8 +1,9 @@
 """Decorators module"""
 from functools import wraps
 
+import jsonschema
 import jwt
-from flask import abort, request
+from flask import abort, g, request
 
 from flixify.helpers.constants import JWT_ALGORITHM, JWT_SECRET
 
@@ -26,10 +27,15 @@ def auth_required(func):
         token = data.split("Bearer ")[-1]
 
         try:
-            jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            token_data = jwt.decode(
+                token,
+                JWT_SECRET,
+                algorithms=[JWT_ALGORITHM]
+            )
+            g.email = token_data['email']
         except Exception as err:
-            print("JWT Decode Exception:", err)
-            abort(401)
+            abort(401, err.args)
+
         return func(*args, **kwargs)
 
     return wrapper
@@ -59,8 +65,7 @@ def admin_required(func):
             user = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             role = user.get('role', 'user')
         except Exception as err:
-            print("JWT Decode Exception:", err)
-            abort(401)
+            abort(401, err)
 
         if role != "admin":
             abort(403)
@@ -68,3 +73,17 @@ def admin_required(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def validate_json_schema(schema):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            dictionary = args[1]
+            try:
+                jsonschema.validate(dictionary, schema)
+            except jsonschema.exceptions.ValidationError as err:
+                abort(400, err.message)
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator

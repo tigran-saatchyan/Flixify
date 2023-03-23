@@ -60,9 +60,7 @@ class DirectorService:
         :return: The number of rows updated.
         """
         self.logger.info(f"Updating director with ID {did}")
-        result = self.directors_dao.update(did, director_data)
-        self.logger.info(f"Updated {result} rows")
-        return result
+        self.directors_dao.update(did, director_data)
 
     def delete(self, did):
         """

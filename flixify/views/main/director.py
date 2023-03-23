@@ -2,6 +2,7 @@
 from flask import request
 from flask_restx import Namespace, Resource
 
+from flixify.helpers.decorators import auth_required
 from flixify.helpers.implemented import director_service
 from flixify.helpers.log_handler import views_logger
 from flixify.setup.api.models.director import director_model
@@ -35,7 +36,7 @@ class DirectorsView(Resource):
         views_logger.info('Getting all directors...')
         directors = director_service.get_all()
         views_logger.info('Returned %s directors', len(directors))
-        return directors_schema.dump(directors), 200
+        return directors, 200
 
     @staticmethod
     # @admin_required
@@ -73,9 +74,10 @@ class DirectorView(Resource):
     """
 
     @staticmethod
-    # @auth_required
+    @auth_required
     @directors_ns.response(200, 'Success')
     @directors_ns.response(404, 'Not Found')
+    @directors_ns.marshal_with(director_model, code=200, description='OK')
     def get(did):
         """
         Retrieve a director by ID.
@@ -87,10 +89,10 @@ class DirectorView(Resource):
         views_logger.info('Getting director with id %d...', did)
         director = director_service.get_one(did)
         views_logger.info(f'Returned director: {director.name}')
-        return director_schema.dump(director), 200
+        return director, 200
 
     @staticmethod
-    # @admin_required
+    @auth_required
     @directors_ns.response(200, 'Success')
     @directors_ns.response(204, 'No Content')
     def put(did):
@@ -105,7 +107,7 @@ class DirectorView(Resource):
         return director_service.update(did, director)
 
     @staticmethod
-    # @admin_required
+    @auth_required
     @directors_ns.response(200, 'Success')
     @directors_ns.response(204, 'No Content')
     @directors_ns.response(404, 'Not Found')

@@ -2,6 +2,7 @@
 from flask import request
 from flask_restx import Namespace, Resource
 
+from flixify.helpers.decorators import auth_required
 from flixify.helpers.implemented import genre_service
 from flixify.helpers.log_handler import views_logger
 from flixify.setup.api.models.genre import genre_model
@@ -24,7 +25,7 @@ class GenresView(Resource):
     """
 
     @staticmethod
-    # @auth_required
+    @auth_required
     @genres_ns.marshal_with(genre_model, code=200, description='OK')
     def get():
         """
@@ -38,7 +39,7 @@ class GenresView(Resource):
         return genres, 200
 
     @staticmethod
-    # @admin_required
+    @auth_required
     def post():
         """
         Create a new genre.
@@ -73,7 +74,7 @@ class GenreView(Resource):
     """
 
     @staticmethod
-    # @auth_required
+    @auth_required
     def get(gid):
         """
         Retrieve a specific genre.
@@ -94,7 +95,7 @@ class GenreView(Resource):
         return {'message': 'Genre not found'}, 404
 
     @staticmethod
-    # @admin_required
+    @auth_required
     @genres_ns.response(200, 'Success')
     @genres_ns.response(204, 'No Content')
     def put(gid):
@@ -110,7 +111,7 @@ class GenreView(Resource):
         return genre_service.update(gid, genre)
 
     @staticmethod
-    # @admin_required
+    @auth_required
     @genres_ns.response(200, 'Success')
     @genres_ns.response(204, 'No Content')
     @genres_ns.response(404, 'Not Found')

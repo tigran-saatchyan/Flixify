@@ -80,14 +80,12 @@ class MovieService:
         count_columns = Movie.__table__.columns
         if len(count_columns) - 1 != len(movie.keys()):
             self.logger.error(
-                "Failed to update movie: Invalid number of columns"
+                "Failed to update movie: Invalid number of fields"
             )
             abort(400)
 
         self.logger.info(f"Updating movie with ID {mid}")
-        result = self.movies_dao.update(mid, movie)
-        self.logger.info(f"Updated {result} rows")
-        return result
+        self.movies_dao.update(mid, movie)
 
     def delete(self, mid):
         """

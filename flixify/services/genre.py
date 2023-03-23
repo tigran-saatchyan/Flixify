@@ -60,9 +60,7 @@ class GenreService:
         :return: The number of rows affected.
         """
         self.logger.info(f"Updating genre with ID {gid}")
-        result = self.genres_dao.update(gid, genre_data)
-        self.logger.info(f"Updated {result} rows")
-        return result
+        self.genres_dao.update(gid, genre_data)
 
     def delete(self, gid):
         """

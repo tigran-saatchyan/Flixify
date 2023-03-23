@@ -19,7 +19,7 @@ movie_get_all_parser.add_argument(
 )
 
 movie_get_all_parser.add_argument(
-    'did',
+    'director_id',
     type=int,
     location='args',
     required=False,
@@ -27,7 +27,7 @@ movie_get_all_parser.add_argument(
 )
 
 movie_get_all_parser.add_argument(
-    'gid',
+    'genre_id',
     type=int,
     location='args',
     required=False,

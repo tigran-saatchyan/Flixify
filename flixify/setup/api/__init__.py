@@ -8,6 +8,9 @@ api = Api(
             "name": "Authorization"
         }
     },
+    security={
+        'Bearer': {'Authorization': {'type': 'apiKey', 'in': 'header', 'name': 'Authorization'}}
+    },
     title="Project Flixify",
     doc="/",
     description="This API provides information "

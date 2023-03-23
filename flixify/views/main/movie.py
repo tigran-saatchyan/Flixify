@@ -10,7 +10,6 @@ from flixify.helpers.log_handler import views_logger
 from flixify.setup.api.models.movie import movie_model
 from flixify.setup.api.parsers.movie import movie_get_all_parser
 
-
 movies_ns = Namespace('movies')
 
 
@@ -78,7 +77,6 @@ class MoviesView(Resource):
         return response, 200
 
     @staticmethod
-    # @admin_required
     def post():
         """
         Create a new movie.
@@ -113,9 +111,10 @@ class MovieView(Resource):
     """
 
     @staticmethod
-    # @auth_required
+    @auth_required
     @movies_ns.response(200, 'Success')
     @movies_ns.response(404, 'Not Found')
+    @movies_ns.marshal_with(movie_model, code=200, description='OK')
     def get(mid):
         """
         Retrieve a single movie based on the ID.
@@ -141,7 +140,7 @@ class MovieView(Resource):
         return movie, 200
 
     @staticmethod
-    # @admin_required
+    @auth_required
     @movies_ns.response(200, 'Success')
     @movies_ns.response(204, 'No Content')
     def put(mid):
@@ -167,7 +166,7 @@ class MovieView(Resource):
         return {"error": "must contain all required fields"}, 204
 
     @staticmethod
-    # @admin_required
+    @auth_required
     @movies_ns.response(204, 'No Content')
     @movies_ns.response(404, 'Not Found')
     def delete(mid):

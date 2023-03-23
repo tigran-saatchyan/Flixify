@@ -1,3 +1,5 @@
+import logging
+
 from flask import Flask
 from flask_cors import CORS
 
@@ -14,6 +16,7 @@ def create_app(config_obj) -> Flask:
     application: Flask = Flask(__name__)
     application.config.from_object(config_obj)
 
+    logging.info("Registering extensions...")
     register_extensions(application)
     return application
 
@@ -29,3 +32,5 @@ def register_extensions(application):
     api.add_namespace(genres_ns)
     api.add_namespace(directors_ns)
     api.add_namespace(movies_ns)
+
+    logging.info("Extensions registered.")

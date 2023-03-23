@@ -4,7 +4,6 @@ from typing import Any, Type
 
 import jwt
 from flask import abort, current_app
-from jwt import InvalidSignatureError
 
 from flixify.helpers.constants import JWT_ALGORITHM, JWT_SECRET
 from flixify.helpers.log_handler import services_logger
@@ -64,7 +63,7 @@ class AuthService:
         access_token_life: datetime = datetime.utcnow() + timedelta(
             minutes=current_app.config['ACCESS_TOKEN_MINUTES']
         )
-        data["expires"] = calendar.timegm(access_token_life.timetuple())
+        data["exp"] = calendar.timegm(access_token_life.timetuple())
         access_token: str = jwt.encode(
             data,
             JWT_SECRET,
@@ -75,7 +74,7 @@ class AuthService:
         refresh_token_life: datetime = datetime.utcnow() + timedelta(
             days=current_app.config['REFRESH_TOKEN_DAYS']
         )
-        data["expires"] = calendar.timegm(refresh_token_life.timetuple())
+        data["exp"] = calendar.timegm(refresh_token_life.timetuple())
         refresh_token: str = jwt.encode(
             data,
             JWT_SECRET,
@@ -111,5 +110,9 @@ class AuthService:
             )
             return tokens
 
-        except InvalidSignatureError:
-            abort(500, "Signature verification failed")
+        except Exception as err:
+            self.logger.error(
+                "Error occurred while approving refresh token: {}".format(err),
+                exc_info=True
+            )
+            abort(401, err)

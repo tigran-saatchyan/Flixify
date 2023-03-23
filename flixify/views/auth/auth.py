@@ -26,10 +26,13 @@ class AuthView(Resource):
         :return: An empty response with status code 201 and a Location header.
         """
         req_json = request.json
+        views_logger.info(
+            f"Received request to create user with data {req_json}"
+            )
         user = user_service.create(req_json)
+        views_logger.info(f"Created new user with ID {user}")
 
-        views_logger.info(f"User with id {user.id} has been created.")
-        return "", 201, {"Location": f"/users/{user.id}"}
+        return "", 201, {"Location": f"/users/{user}"}
 
 
 @auth_ns.route('/login/')

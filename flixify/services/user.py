@@ -2,13 +2,19 @@
 import base64
 import hashlib
 import hmac
+from typing import Type
 
 from flask import abort
+
 from flixify.dao import UserDAO
 from flixify.helpers.constants import CRYPTOGRAPHIC_HASH_FUNCTION, \
     PWD_HASH_ITERATIONS, PWD_HASH_SALT
+from flixify.helpers.decorators import validate_json_schema
 from flixify.helpers.log_handler import services_logger
 from flixify.helpers.utils import is_valid_email
+from flixify.setup.api.json_schemas.login import login_data
+from flixify.setup.api.json_schemas.password import change_password
+from flixify.setup.db.models import User
 
 
 class UserService:
@@ -20,56 +26,29 @@ class UserService:
         self.user_dao = user_dao
         self.logger = services_logger
 
-    def get_all(self):
-        """
-        Retrieve all users.
+    def get_one(self, email):
+        self.logger.info(f"Getting user by email: {email}")
+        return self.get_by_email(email)
 
-        :return: A list of all users.
-        """
-        self.user_dao.get_all()
-        self.logger.info('Retrieving user by token')
-        return
-
-    def get_one(self, uid):
-        """
-        Retrieve a user by ID.
-
-        :param uid: The ID of the user to retrieve.
-
-        :return: The user with the specified ID.
-        """
-        self.logger.info(f'Retrieving user with ID {uid}')
-        return self.user_dao.get_by_id(uid)
-
-    def get_by_email(self, email):
-        """
-        Retrieve a user by username.
-
-        :param email: The username of the user to retrieve.
-
-        :return: The user with the specified username.
-        """
-        self.logger.info(f'Retrieving user with email {email}')
+    def get_by_email(self, email: str) -> Type[User]:
+        self.logger.info(f"Retrieving user by email: {email}")
         return self.user_dao.get_by_email(email)
 
-    def create(self, user_data):
-        """
-        Create a new user.
-
-        :param user_data: A dictionary containing the details of the new user.
-
-        :return: The ID of the newly created user.
-        """
-        self.logger.info('Adding new user')
-
+    @validate_json_schema(login_data)
+    def create(self, user_data: dict) -> None:
+        self.logger.info(f"Creating user: {user_data}")
         is_valid = is_valid_email(user_data["email"])
 
         if not is_valid:
+            self.logger.info(
+                f'{user_data["email"]} is not a valid email address'
+            )
             abort(400, f'{user_data["email"]} is not a valid email address')
 
         user = self.get_by_email(user_data["email"])
 
         if user is not None:
+            self.logger.info(f"user with email '{user.email}' already exists")
             abort(400, f"user with email '{user.email}' already exists")
 
         user_data["password"] = self.hash_password(
@@ -78,23 +57,31 @@ class UserService:
 
         return self.user_dao.create(user_data)
 
-    def update(self, uid, user_data):
-        """
-        Update an existing user.
+    def update(self, email, user_data) -> None:
+        self.logger.info(f"Updating user with email: {email}")
+        user = self.get_by_email(email)
+        self.user_dao.update(user.id, user_data)
 
-        :param uid: The ID of the user to update.
-        :param user_data: A dictionary containing the updated details
-            of the user.
-
-        :return: The number of rows affected by the update.
-        """
-        self.logger.info('Updating user data')
-        user_data["password"] = self.hash_password(
-            user_data.get("password")
+    @validate_json_schema(change_password)
+    def update_password(self, passwords, email) -> None:
+        self.logger.info(f"Updating password for user with email: {email}")
+        user = self.get_by_email(email)
+        is_valid_password = self.compare_passwords(
+            user.password,
+            passwords.get("current_password")
         )
-        return self.user_dao.update(uid, user_data)
+        if not is_valid_password:
+            self.logger.info("Wrong current password")
+            abort(400, "Wrong current password")
 
-    def delete(self, uid):
+        if passwords['new_password'] != passwords['confirm_password']:
+            self.logger.info("Password confirmation doesn't match Password")
+            abort(400, "Password confirmation doesn't match Password")
+
+        password = {'password': self.hash_password(passwords['new_password'])}
+        self.update(email, password)
+
+    def delete(self, uid: int) -> None:
         """
         Delete a user.
 
@@ -103,8 +90,7 @@ class UserService:
         self.logger.info(f"Deleting user with ID {uid}")
         self.user_dao.delete(uid)
 
-    @staticmethod
-    def hash_password(password):
+    def hash_password(self, password):
         """
         Hash a password using a cryptographic hash function.
 
@@ -112,7 +98,8 @@ class UserService:
 
         :return: The hashed password.
         """
-        return base64.b64encode(
+        self.logger.debug(f"Hashing password")
+        hashed_password = base64.b64encode(
             hashlib.pbkdf2_hmac(
                 CRYPTOGRAPHIC_HASH_FUNCTION,
                 password.encode('utf-8'),
@@ -120,9 +107,10 @@ class UserService:
                 PWD_HASH_ITERATIONS
             )
         )
+        self.logger.debug(f"Password hashed")
+        return hashed_password
 
-    @staticmethod
-    def compare_passwords(db_pwd, received_pwd) -> bool:
+    def compare_passwords(self, db_pwd, received_pwd) -> bool:
         """
         Compares two passwords for equality.
 
@@ -133,12 +121,18 @@ class UserService:
 
         :return: A boolean indicating whether the passwords match.
         """
-        return hmac.compare_digest(
-            base64.b64decode(db_pwd),
-            hashlib.pbkdf2_hmac(
-                CRYPTOGRAPHIC_HASH_FUNCTION,
-                received_pwd.encode('utf-8'),
-                PWD_HASH_SALT,
-                PWD_HASH_ITERATIONS
-            )
+        self.logger.debug(
+            f"Comparing passwords. DB pwd, received pwd"
         )
+        hashed_received_pwd = hashlib.pbkdf2_hmac(
+            CRYPTOGRAPHIC_HASH_FUNCTION,
+            received_pwd.encode('utf-8'),
+            PWD_HASH_SALT,
+            PWD_HASH_ITERATIONS
+        )
+        decoded_db_pwd = base64.b64decode(db_pwd)
+        passwords_match = hmac.compare_digest(
+            decoded_db_pwd, hashed_received_pwd
+        )
+        self.logger.debug(f"Passwords match: {passwords_match}")
+        return passwords_match
